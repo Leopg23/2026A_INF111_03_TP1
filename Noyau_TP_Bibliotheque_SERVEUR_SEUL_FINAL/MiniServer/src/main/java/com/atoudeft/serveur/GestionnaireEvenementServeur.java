@@ -4,7 +4,7 @@
  * Noyau client-serveur
  *
  * Auteur  : Professeur Abdelmoumene  Toudeft
- * Documenté  par  : Asma Bellili
+ * Documente  par  : Asma Bellili
  *
  *
  * Ce fichier fait partie du noyau client-serveur fourni aux etudiants.
@@ -18,12 +18,13 @@ package com.atoudeft.serveur;
 import com.atoudeft.commun.evenement.Evenement;
 import com.atoudeft.commun.evenement.GestionnaireEvenement;
 import com.atoudeft.commun.net.Connexion;
+import gestionnaireBibliotheque.GestionnaireBibliotheque; // a ajuster selon le nom exact de votre package
 
 /**
- * Cette classe repr�sente un gestionnaire d'�v�nement d'un serveur. Lorsqu'un serveur re�oit un texte d'un client,
- * il cr�e un �v�nement � partir du texte re�u et alerte ce gestionnaire qui r�agit en g�rant l'�v�nement.
+ * Cette classe represente un gestionnaire d'evenement d'un serveur. Lorsqu'un serveur recoit un texte d'un client,
+ * il cree un evenement a partir du texte recu et alerte ce gestionnaire qui reagit en gerant l'evenement.
  *
- * @author Abdelmoum�ne Toudeft (Abdelmoumene.Toudeft@etsmtl.ca)
+ * @author Abdelmoumene Toudeft (Abdelmoumene.Toudeft@etsmtl.ca)
  * @version 1.0
  * @since 2023-09-01
  */
@@ -31,18 +32,25 @@ public class GestionnaireEvenementServeur implements GestionnaireEvenement {
     private Serveur serveur;
 
     /**
-     * Construit un gestionnaire d'�v�nements pour un serveur.
+     * Gestionnaire du systeme de bibliotheque utilise pour traiter
+     * les commandes recues des clients.
+     */
+    private GestionnaireBibliotheque gestionnaireBibliotheque;
+
+    /**
+     * Construit un gestionnaire d'evenements pour un serveur.
      *
-     * @param serveur Serveur Le serveur pour lequel ce gestionnaire g�re des �v�nements
+     * @param serveur Serveur Le serveur pour lequel ce gestionnaire gere des evenements
      */
     public GestionnaireEvenementServeur(Serveur serveur) {
         this.serveur = serveur;
+        this.gestionnaireBibliotheque = new GestionnaireBibliotheque();
     }
 
     /**
-     * M�thode de gestion d'�v�nements. Cette m�thode contiendra le code qui g�re les r�ponses obtenues d'un client.
+     * Methode de gestion d'evenements. Cette methode contiendra le code qui gere les reponses obtenues d'un client.
      *
-     * @param evenement L'�v�nement � g�rer.
+     * @param evenement L'evenement a gerer.
      */
     @Override
     public void traiter(Evenement evenement) {
@@ -59,33 +67,16 @@ public class GestionnaireEvenementServeur implements GestionnaireEvenement {
                 cnx.close();
             } else {
                 /*
-                 * ------------------------------------------------------------
-                 * TRAITEMENT FOURNI AU DEPART
-                 * ------------------------------------------------------------
-                 * Dans le noyau fourni, le serveur ne fait pas encore de vraie
-                 * gestion de bibliotheque. Il se contente de reprendre le texte
-                 * recu du client, de le convertir en majuscules, puis de le
-                 * renvoyer au client.
-                 *
-                 * Exemple :
-                 * Client  -> hello
-                 * Serveur -> HELLO
-                 *
-                 * Ce traitement simple permet seulement de verifier que la
-                 * communication entre le client et le serveur fonctionne bien.
-                 *
-                 * Dans le TP, c'est principalement ici que le traitement devra
-                 * etre remplace par un appel au gestionnaire de bibliotheque
-                 * que vous aurez programme dans le package :
-                 *
-                 *     gestionnaireBibliotheque
-                 *
-                 * Le serveur devra alors transmettre la commande recue au
-                 * GestionnaireBibliotheque afin d'obtenir une vraie reponse,
-                 * par exemple : AUTHORIZED, BORROW_OK, RETURN_OK, etc.
-                 * ------------------------------------------------------------
+                 * La commande recue (type + argument) est transmise au
+                 * GestionnaireBibliotheque, qui retourne la reponse a
+                 * envoyer au client (AUTHORIZED, BORROW_OK, RETURN_OK, etc.).
                  */
-                reponse = (evenement.getType() + " " + evenement.getArgument()).toUpperCase();
+                String commande = evenement.getType();
+                if (evenement.getArgument() != null && !evenement.getArgument().isEmpty()) {
+                    commande += " " + evenement.getArgument();
+                }
+                int idConnexion = cnx.hashCode();
+                reponse = gestionnaireBibliotheque.traiterCommande(idConnexion, evenement.getType(), evenement.getArgument());
                 cnx.envoyer(reponse);
             }
         }
