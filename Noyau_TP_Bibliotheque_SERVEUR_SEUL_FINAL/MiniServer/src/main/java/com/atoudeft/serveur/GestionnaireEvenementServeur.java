@@ -19,6 +19,7 @@ import com.atoudeft.commun.evenement.Evenement;
 import com.atoudeft.commun.evenement.GestionnaireEvenement;
 import com.atoudeft.commun.net.Connexion;
 import gestionnaireBibliotheque.GestionnaireBibliotheque; // a ajuster selon le nom exact de votre package
+import gestionnaireBibliotheque.Livre;
 
 /**
  * Cette classe represente un gestionnaire d'evenement d'un serveur. Lorsqu'un serveur recoit un texte d'un client,
@@ -45,6 +46,18 @@ public class GestionnaireEvenementServeur implements GestionnaireEvenement {
     public GestionnaireEvenementServeur(Serveur serveur) {
         this.serveur = serveur;
         this.gestionnaireBibliotheque = new GestionnaireBibliotheque();
+        // 1. Pré-chargement
+        gestionnaireBibliotheque.traiterCommande(0, "REGISTER", "101 ETUDIANT nomEtudiant");
+        gestionnaireBibliotheque.traiterCommande(0, "REGISTER", "102 PROFESSEUR nomProfesseur");
+        gestionnaireBibliotheque.traiterCommande(0, "REGISTER", "103 PERSONNEL nomPersonnel");
+
+        Livre livre1 = new Livre("livre1", "auteur1", "categorie1");
+        Livre livre2 = new Livre("livre2", "auteur2", "categorie2");
+        Livre livre3 = new Livre("livre3", "auteur3", "categorie3");
+
+        gestionnaireBibliotheque.getLivres().ajouter(livre1);
+        gestionnaireBibliotheque.getLivres().ajouter(livre2);
+        gestionnaireBibliotheque.getLivres().ajouter(livre3);
     }
 
     /**

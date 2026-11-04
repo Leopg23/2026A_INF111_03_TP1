@@ -15,7 +15,10 @@
 package com.demo;
 
 import com.atoudeft.serveur.Config;
+import com.atoudeft.serveur.GestionnaireEvenementServeur;
 import com.atoudeft.serveur.Serveur;
+import gestionnaireBibliotheque.GestionnaireBibliotheque;
+import gestionnaireBibliotheque.Livre;
 
 import java.util.Scanner;
 
@@ -28,17 +31,17 @@ import java.util.Scanner;
  * @since 2023-09-01
  */
 public class Main {
-	/**
-	 * M�thode principale du programme.
+    /**
+     * M�thode principale du programme.
      *
-	 * @param args Arguments du programme
-	 */
+     * @param args Arguments du programme
+     */
     public static void main(String[] args) {
-
+        Serveur serveur = new Serveur(Config.PORT_SERVEUR);
         Scanner clavier = new Scanner(System.in);
         String saisie;
 
-        Serveur serveur = new Serveur(Config.PORT_SERVEUR);
+
         if (serveur.demarrer()) {
 
             System.out.println("Saisissez EXIT pour arreter le serveur.");
@@ -46,7 +49,8 @@ public class Main {
             while (!"EXIT".equals(saisie)) {
                 System.out.println("??? Saisissez EXIT pour arreter le serveur.");
                 saisie = clavier.nextLine();
-            }System.out.println("Serveur demauré et à l'ecoute " );
+            }
+            System.out.println("Serveur demauré et à l'ecoute ");
         }
 
         serveur.arreter();
