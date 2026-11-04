@@ -1,8 +1,6 @@
 package gestionnaireBibliotheque;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class GestionnaireBibliotheque {
     private int idConnection;
@@ -35,9 +33,10 @@ respecter automatiquement l’ordre de priorité défini dans le système : prof
 
     // AJOUT : constructeur qui initialise les attributs (évite les NullPointerException)
     public GestionnaireBibliotheque() {
-        utilisateurs = new HashMap<>();
-        utilisateursAuthentifies = new HashMap<>();
-        livres = new ListesLivres(new ArrayList<>());
+        this.utilisateurs = new HashMap<>();
+        this.utilisateursAuthentifies = new HashMap<>();
+        this.livres = new ListesLivres(new ArrayList<>());
+        this.reservationsEnAttente = new FilePrioriteReservations(new PriorityQueue<>());
     }
 
 
@@ -177,49 +176,61 @@ respecter automatiquement l’ordre de priorité défini dans le système : prof
     }
 
     //Exercice 4 : commande RETURN <id livre> <jour>
+    // Exercice 4 : commande RETURN <id emprunt> <jour>
     public String traiterRETURN(int idConnexion, String argument) {
-        // 1. L'utilisateur est authentifié sur cette connexion ?
+        // 1. L'utilisateur est authentifié ?
         Utilisateur utilisateur = utilisateursAuthentifies.get(idConnexion);
         if (utilisateur == null) {
             return "AUTHENTICATION_ERROR";
         }
 
-        // 2. Les arguments sont valides ? (2 nombres)
-        if (argument == null) {
+        // 2. Les arguments sont valides ?
+        if (argument == null || argument.trim().isEmpty()) {
             return "BAD_ARGUMENT_ERROR";
         }
         String[] parties = argument.trim().split("\\s+");
         if (parties.length != 2) {
             return "BAD_ARGUMENT_ERROR";
         }
-        int idLivre;
-        int jour;
+        int idEmprunt;
+        int jourRetour;
         try {
-            idLivre = Integer.parseInt(parties[0]);
-            jour = Integer.parseInt(parties[1]);
+            idEmprunt = Integer.parseInt(parties[0]);
+            jourRetour = Integer.parseInt(parties[1]);
         } catch (NumberFormatException e) {
             return "BAD_ARGUMENT_ERROR";
         }
-
-        if (jour < 0) {
+        if (jourRetour < 0) {
             return "BAD_ARGUMENT_ERROR";
         }
 
-        // 3. Verifier que l'emprunt est dans les emprunts en cours de l'utilisateur
-        Emprunt emprunt = utilisateur.rechercherEmpruntEnCours(idLivre);
+        // 3. Vérifier que l'emprunt est dans les emprunts en cours de l'utilisateur
+        Emprunt emprunt = utilisateur.supprimerEmpruntEnCours(idEmprunt);
         if (emprunt == null) {
             return "BAD_BORROW_ERROR";
         }
 
-
-        // 4. Tout est good
-        Livre livre = livres.rechercher(idLivre);
-        utilisateur.supprimerEmpruntEnCours(idLivre);
+        // 4. Mettre à jour l'emprunt et le déplacer vers les emprunts terminés
+        emprunt.retourner(jourRetour);
         utilisateur.ajouterEmpruntTermine(emprunt);
-        livre.setStatut(StatutLivre.DISPONIBLE);
 
+        Livre livre = emprunt.getLivre();
 
-        return "BORROW_OK " + emprunt.getId() + " " + livre.getId() + " " + emprunt.getJourRetourPrevu();
+        // 5. Vérifier s'il existe une réservation en attente pour ce livre
+        Reservation reservationPrioritaire = reservationsEnAttente.retirerPourLivre(livre.getId());
+
+        if (reservationPrioritaire == null) {
+            livre.setStatut(StatutLivre.DISPONIBLE);
+            return "RETURN_OK " + emprunt.getId() + " " + livre.getId();
+        } else {
+            reservationPrioritaire.setStatut(StatutReservation.ATTRIBUEE);
+            Utilisateur utilisateurPrioritaire = utilisateurs.get(reservationPrioritaire.getIdUtilisateur());
+
+            Emprunt nouvelEmprunt = new Emprunt(livre, utilisateurPrioritaire.getId(), jourRetour);
+            utilisateurPrioritaire.ajouterEmpruntEnCours(nouvelEmprunt);
+
+            return "RESERVATION_ASSIGNED " + nouvelEmprunt.getId() + " " + livre.getId();
+        }
     }
 
     //Exercice 5 : commande RESERVE
@@ -245,14 +256,25 @@ respecter automatiquement l’ordre de priorité défini dans le système : prof
         }
 
         //4. Le livre est reserve
-        if (livre.getStatut().equals(StatutLivre.EMPRUNTE)) {
+        if (!livre.getStatut().equals(StatutLivre.EMPRUNTE)) {
             return "BOOK_ALREADY_AVAILABLE_ERROR";
         }
 
-        //5. Tout est good
-        Reservation reservation = new Reservation(livre, idConnexion, utilisateur.getTypeUtilisateur());
+        // 5. L'utilisateur reserve en doublon
+        if (utilisateur.possedeReservationEnAttentePourLivre(idLivre)) {
+            return "BAD_ARGUMENT_ERROR";
+        }
+
+
+        //6. Tout est good
+        Reservation reservation = new Reservation(livre, utilisateur.getId(), utilisateur.getTypeUtilisateur());
         reservationsEnAttente.ajouter(reservation);
         livre.setStatut(StatutLivre.RESERVE);
+
+        //7. verifier quil n'est pas a la limite de reservation
+        if (!utilisateur.ajouterReservation(reservation)) {
+            return "RESERVATION_LIMIT_ERROR";
+        }
         return "RESERVATION_OK";
     }
 
@@ -264,7 +286,7 @@ respecter automatiquement l’ordre de priorité défini dans le système : prof
             return "AUTHENTICATION_ERROR";
         }
         // 2. Verifier si l'utilisateur a entree un argument
-        if (argument != null) {
+        if (argument != "") {
             int idEmprunt;
             try {
                 idEmprunt = Integer.parseInt(argument.trim());
@@ -321,9 +343,9 @@ respecter automatiquement l’ordre de priorité défini dans le système : prof
                     : utilisateur.rechercherEmpruntEnCours(idEmprunt);
         }
         int nombresDeJoursDeRetard = Math.max(jour - emprunt.getJourRetourPrevu(), 0);
-        double montant = utilisateur.calculerPenalite(idEmprunt);
+        double montant = utilisateur.calculerPenalite(nombresDeJoursDeRetard);
 
-        return String.format("PENALTY %.2f %d", montant, nombresDeJoursDeRetard);
+        return String.format(Locale.US, "PENALTY %.2f %d", montant, nombresDeJoursDeRetard);
     }
 
     //Exercice 8 : REGISTER <idUtilisateur> <typeUtilisateur> <nomUtilisateur>

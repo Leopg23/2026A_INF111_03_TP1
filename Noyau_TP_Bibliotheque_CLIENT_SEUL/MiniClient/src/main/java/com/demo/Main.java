@@ -48,6 +48,19 @@ public class Main {
 				+ " sur le port " + client.getPortServeur());
 		System.out.println("Le serveur vous renvoie votre texte converti en majuscules");
 
+		System.out.println("=== Console Bibliothèque prête ===");
+		System.out.println("Exemples de commandes :");
+		System.out.println("  REGISTER 12 ETUDIANT Leo ");
+		System.out.println("  ID 12 ");
+		System.out.println("  BOOKS ");
+		System.out.println("  BORROW 1 5 ");
+		System.out.println("  INFO ");
+		System.out.println("  INFO 1 ");
+		System.out.println("  RETURN 1 45 ");
+		System.out.println("  RESERVE 1 ");
+		System.out.println("  PENALTY 1 50 ");
+		System.out.println("  EXIT ");
+		System.out.println("---------------------------------------------------------------------------------");
 		System.out.println("Saisissez vos textes (EXIT pour quitter) :");
 		do {
 			saisie = clavier.nextLine();

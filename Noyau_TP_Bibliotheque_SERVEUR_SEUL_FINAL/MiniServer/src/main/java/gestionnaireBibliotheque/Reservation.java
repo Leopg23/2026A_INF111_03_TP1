@@ -69,4 +69,10 @@ public class Reservation implements Comparable<Reservation>{
     public Livre getLivre() {
         return this.livre;
     }
+    public void setStatut(StatutReservation statut ) {
+        this.statut = statut;
+    }
+    public StatutReservation getIdUtilisateur() {
+        return this.statut;
+    }
 }
